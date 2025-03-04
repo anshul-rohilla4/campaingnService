@@ -1,0 +1,4 @@
+1. add qr code
+2. edit after saving campaign.
+3. if date is expired autoremove the campaign
+4. 

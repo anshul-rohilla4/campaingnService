@@ -16,37 +16,44 @@ module.exports.renderNewForm = (req, res) => {
 }
 
 module.exports.createCampground = async (req, res, next) => {
-    const geoData = await geocoder.forwardGeocode({
-        query: req.body.campground.location,
-        limit: 1
-    }).send()
-    if (!geoData) {
-        throw new ExpressError("Not found any location match your input, retry!", 422 )
-    }
+    try {
+        console.log('Request body:', req.body);
+        console.log('Request files:', req.files);
 
-    const campground = new Campground(req.body.campground);
-    campground.geometry = geoData.body.features[0].geometry;
-    campground.images = req.files.map(f => ({ url: f.path, filename: f.filename })); // req.files is created for us by multer
-    campground.author = req.user._id;
-    await campground.save();
-    console.log(campground);
-    req.flash('success', 'Successfully made a new campground!');
-    res.redirect(`/campgrounds/${campground._id}`)
+        const geoData = await geocoder.forwardGeocode({
+            query: req.body.campground.location,
+            limit: 1
+        }).send();
+        if (!geoData) {
+            throw new ExpressError("Not found any location match your input, retry!", 422);
+        }
+        const campground = new Campground(req.body.campground);
+        campground.geometry = geoData.body.features[0].geometry;
+        if (req.files.image) {
+            campground.images = req.files.image.map(f => ({ url: f.path, filename: f.filename }));
+        }
+        campground.author = req.user._id;
+        if (req.files.qrcode && req.files.qrcode[0]) {
+            campground.qrcode = { url: req.files.qrcode[0].path, filename: req.files.qrcode[0].filename };
+        }
+        await campground.save();
+        console.log(campground);
+        req.flash('success', 'Successfully made a new campground!');
+        res.redirect(`/campgrounds/${campground._id}`);
+    } catch (error) {
+        console.error('Error creating campground:', error);
+        next(error);
+    }
 }
 
-module.exports.showCampground = async (req, res,) => {
-    const campground = await Campground.findById(req.params.id).populate({
-        path: 'reviews',
-        populate: {
-            path: 'author'
-        }
-    }).populate('author');
+module.exports.showCampground = async (req, res) => {
+    const campground = await Campground.findById(req.params.id).populate('reviews').populate('author');
     if (!campground) {
         req.flash('error', 'Cannot find that campground!');
         return res.redirect('/campgrounds');
     }
     res.render('campgrounds/show', { campground });
-}
+};
 
 module.exports.renderEditForm = async (req, res) => {
     const { id } = req.params;

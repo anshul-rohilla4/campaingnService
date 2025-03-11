@@ -24,6 +24,10 @@ const opts = { toJSON: { virtuals: true } };
 const CampgroundSchema = new Schema({
     title: String,
     images: [ImageSchema],
+    qrcode: {
+        url: String,
+        filename: String
+    },
     geometry: {
         type: {
             type: String,

@@ -1,15 +1,14 @@
-// this file is modificated ver from https://docs.mapbox.com/mapbox-gl-js/example/cluster/ 
+// this file is modified from https://docs.mapbox.com/mapbox-gl-js/example/cluster/
 
 mapboxgl.accessToken = mapToken;
 const map = new mapboxgl.Map({
     container: 'cluster-map',
     style: 'mapbox://styles/mapbox/light-v10',
-    center: [-103.59179687498357, 40.66995747013945],
-    zoom: 3
+    center: [-103.59179687498357, 40.66995747013945], // Default center (USA)
+    zoom: 3 // Default zoom level
 });
 
 map.addControl(new mapboxgl.NavigationControl());
-
 
 map.on('load', function () {
     // Add a new source from our GeoJSON data and
@@ -17,9 +16,7 @@ map.on('load', function () {
     // add the point_count property to your source data.
     map.addSource('campgrounds', {
         type: 'geojson',
-        // Point to GeoJSON data. This example visualizes all M1.0+ earthquakes
-        // from 12/22/15 to 1/21/16 as logged by USGS' Earthquake hazards program.
-        data: campgrounds,
+        data: campgrounds, // Use the campgrounds data passed from the server
         cluster: true,
         clusterMaxZoom: 14, // Max zoom to cluster points on
         clusterRadius: 50 // Radius of each cluster when clustering points (defaults to 50)
@@ -31,11 +28,6 @@ map.on('load', function () {
         source: 'campgrounds',
         filter: ['has', 'point_count'],
         paint: {
-            // Use step expressions (https://docs.mapbox.com/mapbox-gl-js/style-spec/#expressions-step)
-            // with three steps to implement three types of circles:
-            //   * Blue, 20px circles when point count is less than 100
-            //   * Yellow, 30px circles when point count is between 100 and 750
-            //   * Pink, 40px circles when point count is greater than or equal to 750
             'circle-color': [
                 'step',
                 ['get', 'point_count'],

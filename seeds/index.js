@@ -1,157 +1,94 @@
+const mongoose = require('mongoose');
+const cities = require('./cities');
+const { places, descriptors } = require('./seedHelpers');
+const Campground = require('../models/campground');
+const User = require('../models/user');
+const cloudinary = require('cloudinary').v2;
+
+
 if (process.env.NODE_ENV !== "production") {
-    require("dotenv").config();
+    require('dotenv').config();
 }
 
-const express = require("express");
-const path = require("path");
-const helmet = require("helmet");
-const passport = require("passport");
-const mongoose = require("mongoose");
-const ejsMate = require("ejs-mate");
-const session = require("express-session");
-const flash = require("connect-flash");
-const methodOverride = require("method-override");
-const LocalStrategy = require("passport-local");
-const mongoSanitize = require("express-mongo-sanitize");
-const ExpressError = require("./utils/ExpressError");
-const User = require("./models/user");
-const userRoutes = require("./routes/users");
-const campgroundRoutes = require("./routes/campgrounds");
-const reviewRoutes = require("./routes/reviews");
 
-const MongoDBStore = require("connect-mongo")(session);
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_KEY,
+    api_secret: process.env.CLOUDINARY_SECRET
+});
 
-const app = express();
-
-const dbUrl = process.env.DB_URL ;
-
+const dbUrl = process.env.DB_URL || 'mongodb://127.0.0.1:27017/yelp-camp';
+console.log(process.env.DB_URL);
 mongoose.connect(dbUrl, {
     useNewUrlParser: true,
-    useUnifiedTopology: true,
+    useCreateIndex: true,
+    useUnifiedTopology: true
+});
+
+const db = mongoose.connection;
+db.on("error", console.error.bind(console, "connection error:"));
+db.once("open", () => {
+    console.log("Database connected");
+});
+
+
+const sample = array => array[Math.floor(Math.random() * array.length)];
+
+
+const seedDB = async () => {
+    // clear all cur users and campgrounds (along with its comment)
+    // ! hàm này chưa hoàn thành
+
+    const user = new User({
+        email: "trancongquang2002@gmail.com",
+        username: "qang"
+    })
+
+    const registeredUser = await User.register(user, "qang");
+
+    await cloudinary.v2.uploader
+        .upload("/seed-img/seed1.jpg", {
+            folder: "seed-img/",
+            public_id: "seed1",
+            use_filename: true,
+            unique_filename: false
+        })
+        .then(result => console.log(result));
+
+
+    for (let i = 0; i < 50; i++) {
+        const random1000 = Math.floor(Math.random() * 1000);
+        const price = Math.floor(Math.random() * 20) + 10;
+        const camp = new Campground({
+            //YOUR USER ID
+            author: '653d0786717b3f3e7877aeec',
+            location: `${cities[random1000].city}, ${cities[random1000].state}`,
+            title: `${sample(descriptors)} ${sample(places)}`,
+            description: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Quibusdam dolores vero perferendis laudantium, consequuntur voluptatibus nulla architecto, sit soluta esse iure sed labore ipsam a cum nihil atque molestiae deserunt!',
+            price,
+            geometry: {
+                type: "Point",
+                coordinates: [
+                    cities[random1000].longitude,
+                    cities[random1000].latitude,
+                ]
+            },
+            images: [
+                {
+                    url: 'https://res.cloudinary.com/dgo51ltyy/image/upload/v1698575538/YelpCamp/rk5cfgnwmre1gimvf7zi.jpg',
+                    filename: 'YelpCamp/653e34b29d3f6818cc73d9ca'
+                },
+                {
+                    url: 'https://res.cloudinary.com/dgo51ltyy/image/upload/v1698575597/YelpCamp/tumktwmasbbenzhw67ph.jpg',
+                    filename: 'YelpCamp/tumktwmasbbenzhw67ph'
+                }
+            ]
+        })
+        await camp.save();
+        console.log("add success")
+    }
+}
+
+seedDB().then(() => {
+    mongoose.connection.close();
 })
-.then(() => console.log("Connected to MongoDB"))
-.catch(err => console.error("MongoDB connection error:", err));
-
-app.engine("ejs", ejsMate);
-app.set("view engine", "ejs");
-app.set("views", path.join(__dirname, "views"));
-
-app.use(express.urlencoded({ extended: true }));
-app.use(methodOverride("_method"));
-app.use(express.static(path.join(__dirname, "public")));
-app.use(
-    mongoSanitize({
-        replaceWith: "_",
-    })
-);
-
-const secret = process.env.SECRET || "thisshouldbeabettersecret!";
-
-const store = new MongoDBStore({
-    url: dbUrl,
-    secret,
-    touchAfter: 24 * 60 * 60, // after 1 day, update the session, else, only update session when something changes
-});
-
-store.on("error", function (e) {
-    console.log("SESSION STORE ERROR", e);
-});
-
-const sessionConfig = {
-    store,
-    name: "session",
-    secret,
-    resave: false,
-    saveUninitialized: true,
-    cookie: {
-        httpOnly: true,
-        expires: Date.now() + 1000 * 60 * 60 * 24 * 7,
-        maxAge: 1000 * 60 * 60 * 24 * 7,
-    },
-};
-
-app.use(session(sessionConfig));
-app.use(flash());
-app.use(helmet({ contentSecurityPolicy: false }));
-
-const scriptSrcUrls = [
-    "https://stackpath.bootstrapcdn.com/",
-    "https://api.tiles.mapbox.com/",
-    "https://api.mapbox.com/",
-    "https://kit.fontawesome.com/",
-    "https://cdnjs.cloudflare.com/",
-    "https://cdn.jsdelivr.net",
-];
-const styleSrcUrls = [
-    "https://kit-free.fontawesome.com/",
-    "https://stackpath.bootstrapcdn.com/",
-    "https://api.mapbox.com/",
-    "https://api.tiles.mapbox.com/",
-    "https://fonts.googleapis.com/",
-    "https://use.fontawesome.com/",
-];
-const connectSrcUrls = [
-    "https://api.mapbox.com/",
-    "https://a.tiles.mapbox.com/",
-    "https://b.tiles.mapbox.com/",
-    "https://events.mapbox.com/",
-];
-const fontSrcUrls = [];
-
-app.use(
-    helmet.contentSecurityPolicy({
-        directives: {
-            defaultSrc: [],
-            connectSrc: ["'self'", ...connectSrcUrls],
-            scriptSrc: ["'unsafe-inline'", "'self'", ...scriptSrcUrls],
-            styleSrc: ["'self'", "'unsafe-inline'", ...styleSrcUrls],
-            workerSrc: ["'self'", "blob:"],
-            objectSrc: [],
-            imgSrc: [
-                "'self'",
-                "blob:",
-                "data:",
-                `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/`,
-                "https://images.unsplash.com/",
-            ],
-            fontSrc: ["'self'", ...fontSrcUrls],
-        },
-    })
-);
-
-app.use(passport.initialize());
-app.use(passport.session());
-passport.use(new LocalStrategy(User.authenticate()));
-
-passport.serializeUser(User.serializeUser());
-passport.deserializeUser(User.deserializeUser());
-
-app.use((req, res, next) => {
-    res.locals.currentUser = req.user;
-    res.locals.success = req.flash("success");
-    res.locals.error = req.flash("error");
-    next();
-});
-
-app.use("/", userRoutes);
-app.use("/campgrounds", campgroundRoutes);
-app.use("/campgrounds/:id/reviews", reviewRoutes);
-
-app.get("/", (req, res) => {
-    res.render("home");
-});
-
-app.all("*", (req, res, next) => {
-    next(new ExpressError("Page Not Found", 404));
-});
-
-app.use((err, req, res, next) => {
-    const { statusCode = 500 } = err;
-    if (!err.message) err.message = "Oh No, Something Went Wrong!";
-    res.status(statusCode).render("error", { err });
-});
-
-const port = process.env.PORT || 3000;
-app.listen(port, () => {
-    console.log(`Serving on port ${port}`);
-});

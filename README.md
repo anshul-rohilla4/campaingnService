@@ -1,6 +1,6 @@
-# Yelp Camp Web Application
-live@http://anshulzzz.duckdns.org:31785/
-project is forked from https://github.com/jaiswaladi246/3-Tier-Full-Stack.git
+# Yelp Camp Web Application\n
+live@http://anshulzzz.duckdns.org:31785/ \n
+project is forked from https://github.com/jaiswaladi246/3-Tier-Full-Stack.git\n
 This web application allows users to add, view, access, and rate campgrounds by location. It is based on "The Web Developer Bootcamp" by Colt Steele, but includes several modifications and bug fixes. The application leverages a variety of technologies and packages, such as:
 
 - **Node.js with Express**: Used for the web server.

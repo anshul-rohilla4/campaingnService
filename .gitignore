@@ -79,4 +79,4 @@ public/
 .vscode/
 
 # Cloudinary uploads
-cloudinary/
+cloudinary/".env" 
